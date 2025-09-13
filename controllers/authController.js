@@ -4,7 +4,6 @@ const jwt = require("jsonwebtoken");
 
 // Generate JWT Token and send in JSON response (no cookies)
 const sendTokenResponse = (user, statusCode, res) => {
-  // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE, // e.g. "1d" or "30m"
   });
@@ -23,16 +22,13 @@ const sendTokenResponse = (user, statusCode, res) => {
   });
 };
 
-module.exports = sendTokenResponse;
-
 // @desc    Register user
 // @route   POST /api/auth/register
 // @access  Public
-exports.register = async (req, res, next) => {
+const register = async (req, res, next) => {
   try {
     const { name, email, password, role, department, matricNumber } = req.body;
 
-    // Create user
     const user = await User.create({
       name,
       email,
@@ -42,7 +38,6 @@ exports.register = async (req, res, next) => {
       matricNumber,
     });
 
-    // If student, create student profile
     if (role === "student") {
       await Student.create({
         user: user._id,
@@ -55,21 +50,17 @@ exports.register = async (req, res, next) => {
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
 // @desc    Login user
 // @route   POST /api/auth/login
 // @access  Public
-exports.login = async (req, res, next) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Validate email & password
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -77,50 +68,42 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    // Check for user
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
-    // Check if password matches
     const isMatch = await user.matchPassword(password);
 
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
     }
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private
-exports.getMe = async (req, res, next) => {
+const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id).populate("department");
-
-    res.status(200).json({
-      success: true,
-      data: user,
-    });
+    res.status(200).json({ success: true, data: user });
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: err.message,
-    });
+    res.status(400).json({ success: false, message: err.message });
   }
+};
+
+module.exports = {
+  register,
+  login,
+  getMe,
 };
