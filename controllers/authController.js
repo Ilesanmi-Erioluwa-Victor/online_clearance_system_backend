@@ -1,111 +1,74 @@
-const User = require("../models/User");
-const Student = require("../models/Student");
 const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const Role = require("../models/Role");
 
-// Generate JWT Token
-const sendTokenResponse = (user, statusCode, res) => {
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || "30d",
-  });
-
-  const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE, 10) || 30;
-  const options = {
-    expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
-    httpOnly: true,
-  };
-
-  res
-    .status(statusCode)
-    .cookie("token", token, options)
-    .json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        matricNumber: user.matricNumber,
-      },
-    });
+const generateToken = (id) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 };
 
-// @desc    Register user
-const register = async (req, res) => {
+exports.register = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      password,
-      role,
-      department,
-      matricNumber,
-      level,
-      graduationYear,
-    } = req.body;
+    const { name, email, password, roleName, department } = req.body;
+
+    const role = await Role.findOne({ name: roleName });
+    if (!role) return res.status(400).json({ message: "Invalid role" });
 
     const user = await User.create({
       name,
       email,
       password,
-      role,
+      role: role._id,
       department,
-      matricNumber,
     });
 
-    if (role === "student") {
-      await Student.create({
-        user: user._id,
-        matricNumber,
-        department,
-        level,
-        graduationYear,
-      });
-    }
-
-    sendTokenResponse(user, 200, res);
+    res.status(201).json({
+      success: true,
+      token: generateToken(user._id),
+      user: { id: user._id, name: user.name, email: user.email },
+    });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Login user
-const login = async (req, res) => {
+exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({
-        success: false,
-        message: "Please provide an email and password",
-      });
 
-    const user = await User.findOne({ email }).select("+password");
-    if (!user)
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+    const user = await User.findOne({ email }).populate("role");
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
     const isMatch = await user.matchPassword(password);
     if (!isMatch)
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
 
-    sendTokenResponse(user, 200, res);
+    res.json({
+      success: true,
+      token: generateToken(user._id),
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role.name,
+      },
+    });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Get current logged in user
-const getMe = async (req, res) => {
+// 👇 NEW: Get current user profile
+exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate("department");
-    res.status(200).json({ success: true, data: user });
+    const user = await User.findById(req.user._id)
+      .select("-password")
+      .populate("role")
+      .populate("department");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ success: true, user });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
-
-module.exports = { register, login, getMe };

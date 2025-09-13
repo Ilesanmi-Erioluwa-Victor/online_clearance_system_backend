@@ -2,170 +2,93 @@ const Clearance = require("../models/Clearance");
 const Student = require("../models/Student");
 const Department = require("../models/Department");
 
-// @desc    Initiate clearance process
-const initiateClearance = async (req, res) => {
+exports.requestClearance = async (req, res) => {
   try {
-    const { studentId, departmentId } = req.body;
+    const { studentId, departmentId, requiredDocs } = req.body;
 
-    const student = await Student.findOne({ user: studentId });
-    if (!student)
-      return res
-        .status(404)
-        .json({ success: false, message: "Student not found" });
-
+    const student = await Student.findById(studentId);
     const department = await Department.findById(departmentId);
-    if (!department)
+    if (!student || !department)
       return res
         .status(404)
-        .json({ success: false, message: "Department not found" });
-
-    const existingClearance = await Clearance.findOne({
-      student: student._id,
-      department: departmentId,
-    });
-    if (existingClearance)
-      return res
-        .status(400)
-        .json({ success: false, message: "Clearance already initiated" });
-
-    const requirements =
-      department.clearanceRequirements?.map((req) => ({
-        requirement: req._id,
-        status: "pending",
-      })) || [];
+        .json({ message: "Student or Department not found" });
 
     const clearance = await Clearance.create({
-      student: student._id,
+      student: studentId,
       department: departmentId,
-      requirements,
-    });
-    await Student.findByIdAndUpdate(student._id, {
-      clearanceStatus: "in_progress",
+      submittedBy: req.user._id,
+      requiredDocs,
     });
 
-    res.status(201).json({ success: true, data: clearance });
+    res.status(201).json({ success: true, clearance });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Get clearance details
-const getClearance = async (req, res) => {
+exports.getClearances = async (req, res) => {
   try {
-    const clearance = await Clearance.findById(req.params.clearanceId)
+    const clearances = await Clearance.find()
       .populate("student")
       .populate("department")
-      .populate("requirements.requirement")
-      .populate("requirements.approvedBy", "name email");
-
-    if (!clearance)
-      return res
-        .status(404)
-        .json({ success: false, message: "Clearance not found" });
-
-    res.status(200).json({ success: true, data: clearance });
+      .populate("submittedBy");
+    res.json({ success: true, count: clearances.length, clearances });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Approve requirement
-const approveRequirement = async (req, res) => {
+exports.getClearanceById = async (req, res) => {
   try {
-    const { requirementId, comments } = req.body;
-    const clearance = await Clearance.findById(req.params.clearanceId);
+    const clearance = await Clearance.findById(req.params.id)
+      .populate("student")
+      .populate("department")
+      .populate("submittedBy");
     if (!clearance)
-      return res
-        .status(404)
-        .json({ success: false, message: "Clearance not found" });
+      return res.status(404).json({ message: "Clearance not found" });
+    res.json({ success: true, clearance });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
-    const requirement = clearance.requirements.id(requirementId);
-    if (!requirement)
-      return res
-        .status(404)
-        .json({ success: false, message: "Requirement not found" });
+exports.updateClearanceStatus = async (req, res) => {
+  try {
+    const { status, remarks } = req.body;
+    const clearance = await Clearance.findById(req.params.id);
+    if (!clearance)
+      return res.status(404).json({ message: "Clearance not found" });
 
-    requirement.status = "approved";
-    requirement.approvedBy = req.user.id;
-    requirement.approvedAt = Date.now();
-    requirement.comments = comments;
+    clearance.status = status;
+    clearance.remarks = remarks || clearance.remarks;
+    if (status === "approved") clearance.clearedAt = Date.now();
+
     await clearance.save();
 
-    const allApproved = clearance.requirements.every(
-      (r) => r.status === "approved"
-    );
-    if (allApproved) {
-      clearance.status = "completed";
-      clearance.completionDate = Date.now();
-      await clearance.save();
-      await Student.findByIdAndUpdate(clearance.student, {
-        clearanceStatus: "completed",
+    // mark student as cleared if all their departments are approved
+    if (status === "approved") {
+      const allClearances = await Clearance.find({
+        student: clearance.student,
       });
+      const allApproved = allClearances.every((c) => c.status === "approved");
+      if (allApproved) {
+        await Student.findByIdAndUpdate(clearance.student, { isCleared: true });
+      }
     }
 
-    res.status(200).json({ success: true, data: clearance });
+    res.json({ success: true, clearance });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Reject requirement
-const rejectRequirement = async (req, res) => {
+exports.deleteClearance = async (req, res) => {
   try {
-    const { requirementId, comments, reasons } = req.body;
-    const clearance = await Clearance.findById(req.params.clearanceId);
+    const clearance = await Clearance.findByIdAndDelete(req.params.id);
     if (!clearance)
-      return res
-        .status(404)
-        .json({ success: false, message: "Clearance not found" });
-
-    const requirement = clearance.requirements.id(requirementId);
-    if (!requirement)
-      return res
-        .status(404)
-        .json({ success: false, message: "Requirement not found" });
-
-    requirement.status = "rejected";
-    requirement.comments = comments;
-    requirement.rejectionReasons = reasons;
-
-    clearance.status = "pending_issues";
-    await clearance.save();
-    await Student.findByIdAndUpdate(clearance.student, {
-      clearanceStatus: "pending_issues",
-    });
-
-    res.status(200).json({ success: true, data: clearance });
+      return res.status(404).json({ message: "Clearance not found" });
+    res.json({ success: true, message: "Clearance deleted" });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
-};
-
-// @desc    Get student clearances
-const getStudentClearances = async (req, res) => {
-  try {
-    const student = await Student.findOne({ user: req.params.studentId });
-    if (!student)
-      return res
-        .status(404)
-        .json({ success: false, message: "Student not found" });
-
-    const clearances = await Clearance.find({ student: student._id })
-      .populate("department")
-      .populate("requirements.requirement");
-
-    res
-      .status(200)
-      .json({ success: true, count: clearances.length, data: clearances });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-module.exports = {
-  initiateClearance,
-  getClearance,
-  approveRequirement,
-  rejectRequirement,
-  getStudentClearances,
 };

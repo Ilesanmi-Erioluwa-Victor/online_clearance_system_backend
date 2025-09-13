@@ -1,79 +1,58 @@
 const Department = require("../models/Department");
 
-// @desc    Get all departments
-const getDepartments = async (req, res) => {
+exports.createDepartment = async (req, res) => {
   try {
-    const departments = await Department.find().populate({
-      path: "head",
-      select: "name email",
-    });
-    res
-      .status(200)
-      .json({ success: true, count: departments.length, data: departments });
+    const department = await Department.create(req.body);
+    res.status(201).json({ success: true, department });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Get single department
-const getDepartment = async (req, res) => {
+exports.getDepartments = async (req, res) => {
   try {
-    const department = await Department.findById(req.params.id).populate({
-      path: "head",
-      select: "name email",
-    });
-    if (!department)
-      return res
-        .status(404)
-        .json({ success: false, message: "Department not found" });
-    res.status(200).json({ success: true, data: department });
+    const departments = await Department.find().populate("head");
+    res.json({ success: true, departments });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-// @desc    Get department clearance requirements
-const getDepartmentClearanceRequirements = async (req, res) => {
+exports.getDepartmentById = async (req, res) => {
   try {
-    const department = await Department.findById(req.params.id);
-    if (!department)
-      return res
-        .status(404)
-        .json({ success: false, message: "Department not found" });
-    res
-      .status(200)
-      .json({ success: true, data: department.clearanceRequirements });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
-
-// @desc    Update department clearance requirements
-const updateDepartmentClearanceRequirements = async (req, res) => {
-  try {
-    let department = await Department.findById(req.params.id);
-    if (!department)
-      return res
-        .status(404)
-        .json({ success: false, message: "Department not found" });
-
-    department = await Department.findByIdAndUpdate(
-      req.params.id,
-      { clearanceRequirements: req.body.requirements },
-      { new: true, runValidators: true }
+    const department = await Department.findById(req.params.id).populate(
+      "head"
     );
-
-    res
-      .status(200)
-      .json({ success: true, data: department.clearanceRequirements });
+    if (!department)
+      return res.status(404).json({ message: "Department not found" });
+    res.json({ success: true, department });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    res.status(500).json({ message: err.message });
   }
 };
 
-module.exports = {
-  getDepartments,
-  getDepartment,
-  getDepartmentClearanceRequirements,
-  updateDepartmentClearanceRequirements,
+exports.updateDepartment = async (req, res) => {
+  try {
+    const department = await Department.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!department)
+      return res.status(404).json({ message: "Department not found" });
+    res.json({ success: true, department });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteDepartment = async (req, res) => {
+  try {
+    const department = await Department.findByIdAndDelete(req.params.id);
+    if (!department)
+      return res.status(404).json({ message: "Department not found" });
+    res.json({ success: true, message: "Department deleted" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };
