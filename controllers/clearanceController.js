@@ -1,24 +1,11 @@
 const Clearance = require("../models/Clearance");
 const Student = require("../models/Student");
 const Department = require("../models/Department");
-const mongoose = require("mongoose");
 
-// @desc Initiate clearance process
-// @route POST /api/clearance/initiate
-// @access Private/Student
-exports.initiateClearance = async (req, res) => {
+// @desc    Initiate clearance process
+const initiateClearance = async (req, res) => {
   try {
     const { studentId, departmentId } = req.body;
-
-    if (!studentId || !mongoose.Types.ObjectId.isValid(studentId))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid studentId" });
-
-    if (!departmentId || !mongoose.Types.ObjectId.isValid(departmentId))
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid departmentId" });
 
     const student = await Student.findOne({ user: studentId });
     if (!student)
@@ -52,7 +39,6 @@ exports.initiateClearance = async (req, res) => {
       department: departmentId,
       requirements,
     });
-
     await Student.findByIdAndUpdate(student._id, {
       clearanceStatus: "in_progress",
     });
@@ -63,16 +49,11 @@ exports.initiateClearance = async (req, res) => {
   }
 };
 
-// @desc Get clearance details
-// @route GET /api/clearance/:clearanceId
-// @access Private
-exports.getClearance = async (req, res) => {
+// @desc    Get clearance details
+const getClearance = async (req, res) => {
   try {
     const clearance = await Clearance.findById(req.params.clearanceId)
-      .populate({
-        path: "student",
-        populate: { path: "user", select: "name email" },
-      })
+      .populate("student")
       .populate("department")
       .populate("requirements.requirement")
       .populate("requirements.approvedBy", "name email");
@@ -88,10 +69,8 @@ exports.getClearance = async (req, res) => {
   }
 };
 
-// @desc Approve a requirement
-// @route POST /api/clearance/:clearanceId/approve
-// @access Private/Staff/Admin/DepartmentHead
-exports.approveRequirement = async (req, res) => {
+// @desc    Approve requirement
+const approveRequirement = async (req, res) => {
   try {
     const { requirementId, comments } = req.body;
     const clearance = await Clearance.findById(req.params.clearanceId);
@@ -110,26 +89,28 @@ exports.approveRequirement = async (req, res) => {
     requirement.approvedBy = req.user.id;
     requirement.approvedAt = Date.now();
     requirement.comments = comments;
+    await clearance.save();
 
-    if (clearance.requirements.every((r) => r.status === "approved")) {
+    const allApproved = clearance.requirements.every(
+      (r) => r.status === "approved"
+    );
+    if (allApproved) {
       clearance.status = "completed";
       clearance.completionDate = Date.now();
+      await clearance.save();
       await Student.findByIdAndUpdate(clearance.student, {
         clearanceStatus: "completed",
       });
     }
 
-    await clearance.save();
     res.status(200).json({ success: true, data: clearance });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 };
 
-// @desc Reject a requirement
-// @route POST /api/clearance/:clearanceId/reject
-// @access Private/Staff/Admin/DepartmentHead
-exports.rejectRequirement = async (req, res) => {
+// @desc    Reject requirement
+const rejectRequirement = async (req, res) => {
   try {
     const { requirementId, comments, reasons } = req.body;
     const clearance = await Clearance.findById(req.params.clearanceId);
@@ -158,4 +139,33 @@ exports.rejectRequirement = async (req, res) => {
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
+};
+
+// @desc    Get student clearances
+const getStudentClearances = async (req, res) => {
+  try {
+    const student = await Student.findOne({ user: req.params.studentId });
+    if (!student)
+      return res
+        .status(404)
+        .json({ success: false, message: "Student not found" });
+
+    const clearances = await Clearance.find({ student: student._id })
+      .populate("department")
+      .populate("requirements.requirement");
+
+    res
+      .status(200)
+      .json({ success: true, count: clearances.length, data: clearances });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  initiateClearance,
+  getClearance,
+  approveRequirement,
+  rejectRequirement,
+  getStudentClearances,
 };

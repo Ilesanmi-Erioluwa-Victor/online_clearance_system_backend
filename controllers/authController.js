@@ -2,14 +2,13 @@ const User = require("../models/User");
 const Student = require("../models/Student");
 const jwt = require("jsonwebtoken");
 
-// Helper to send JWT token response
+// Generate JWT Token
 const sendTokenResponse = (user, statusCode, res) => {
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || "30d",
   });
 
   const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE, 10) || 30;
-
   const options = {
     expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
@@ -32,10 +31,8 @@ const sendTokenResponse = (user, statusCode, res) => {
     });
 };
 
-// @desc Register user
-// @route POST /api/auth/register
-// @access Public
-exports.register = async (req, res) => {
+// @desc    Register user
+const register = async (req, res) => {
   try {
     const {
       name,
@@ -73,16 +70,15 @@ exports.register = async (req, res) => {
   }
 };
 
-// @desc Login user
-// @route POST /api/auth/login
-// @access Public
-exports.login = async (req, res) => {
+// @desc    Login user
+const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email and password required" });
+      return res.status(400).json({
+        success: false,
+        message: "Please provide an email and password",
+      });
 
     const user = await User.findOne({ email }).select("+password");
     if (!user)
@@ -102,17 +98,14 @@ exports.login = async (req, res) => {
   }
 };
 
-// @desc Get logged in user
-// @route GET /api/auth/me
-// @access Private
-exports.getMe = async (req, res) => {
+// @desc    Get current logged in user
+const getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).populate(
-      "department",
-      "name code"
-    );
+    const user = await User.findById(req.user.id).populate("department");
     res.status(200).json({ success: true, data: user });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 };
+
+module.exports = { register, login, getMe };

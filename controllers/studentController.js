@@ -4,39 +4,28 @@ const User = require("../models/User");
 // @desc    Get all students
 // @route   GET /api/students
 // @access  Private/Admin/Department
-const getStudents = async (req, res, next) => {
+const getStudents = async (req, res) => {
   try {
-    let query;
-
-    // Copy req.query
     const reqQuery = { ...req.query };
-
-    // Fields to exclude
     const removeFields = ["select", "sort", "page", "limit"];
     removeFields.forEach((param) => delete reqQuery[param]);
 
-    // Create query string
     let queryStr = JSON.stringify(reqQuery);
-
-    // Create operators ($gt, $gte, etc)
     queryStr = queryStr.replace(
       /\b(gt|gte|lt|lte|in)\b/g,
       (match) => `$${match}`
     );
 
-    // Finding resource
-    query = Student.find(JSON.parse(queryStr)).populate([
+    let query = Student.find(JSON.parse(queryStr)).populate([
       { path: "user", select: "name email" },
       { path: "department", select: "name code" },
     ]);
 
-    // Select Fields
     if (req.query.select) {
       const fields = req.query.select.split(",").join(" ");
       query = query.select(fields);
     }
 
-    // Sort
     if (req.query.sort) {
       const sortBy = req.query.sort.split(",").join(" ");
       query = query.sort(sortBy);
@@ -44,7 +33,6 @@ const getStudents = async (req, res, next) => {
       query = query.sort("-createdAt");
     }
 
-    // Pagination
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 25;
     const startIndex = (page - 1) * limit;
@@ -52,16 +40,11 @@ const getStudents = async (req, res, next) => {
     const total = await Student.countDocuments(JSON.parse(queryStr));
 
     query = query.skip(startIndex).limit(limit);
-
     const students = await query;
 
     const pagination = {};
-    if (endIndex < total) {
-      pagination.next = { page: page + 1, limit };
-    }
-    if (startIndex > 0) {
-      pagination.prev = { page: page - 1, limit };
-    }
+    if (endIndex < total) pagination.next = { page: page + 1, limit };
+    if (startIndex > 0) pagination.prev = { page: page - 1, limit };
 
     res.status(200).json({
       success: true,
@@ -77,18 +60,17 @@ const getStudents = async (req, res, next) => {
 // @desc    Get single student
 // @route   GET /api/students/:id
 // @access  Private
-const getStudent = async (req, res, next) => {
+const getStudent = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id).populate([
       { path: "user", select: "name email" },
       { path: "department", select: "name code" },
     ]);
 
-    if (!student) {
+    if (!student)
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
-    }
 
     res.status(200).json({ success: true, data: student });
   } catch (err) {
@@ -99,15 +81,13 @@ const getStudent = async (req, res, next) => {
 // @desc    Get student clearance status
 // @route   GET /api/students/:id/clearance-status
 // @access  Private
-const getStudentClearanceStatus = async (req, res, next) => {
+const getStudentClearanceStatus = async (req, res) => {
   try {
     const student = await Student.findById(req.params.id);
-
-    if (!student) {
+    if (!student)
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
-    }
 
     res.status(200).json({
       success: true,
@@ -121,15 +101,13 @@ const getStudentClearanceStatus = async (req, res, next) => {
 // @desc    Update student
 // @route   PUT /api/students/:id
 // @access  Private/Admin
-const updateStudent = async (req, res, next) => {
+const updateStudent = async (req, res) => {
   try {
     let student = await Student.findById(req.params.id);
-
-    if (!student) {
+    if (!student)
       return res
         .status(404)
         .json({ success: false, message: "Student not found" });
-    }
 
     student = await Student.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -142,7 +120,7 @@ const updateStudent = async (req, res, next) => {
   }
 };
 
-// Export all functions properly
+// Export all controller functions
 module.exports = {
   getStudents,
   getStudent,
