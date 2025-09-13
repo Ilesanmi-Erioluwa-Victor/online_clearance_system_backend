@@ -8,7 +8,7 @@ const {
 
 const router = express.Router();
 
-const { protect, authorize } = require("../middleware/auth");
+// const { protect, authorize } = require("../middleware/auth");
 
 router.route("/").get(getDepartments);
 
@@ -17,10 +17,6 @@ router.route("/:id").get(getDepartment);
 router
   .route("/:id/clearance-requirements")
   .get(getDepartmentClearanceRequirements)
-  .put(
-    protect,
-    authorize("admin", "department_head"),
-    updateDepartmentClearanceRequirements
-  );
+  .put(("admin", "department_head"), updateDepartmentClearanceRequirements);
 
 module.exports = router;

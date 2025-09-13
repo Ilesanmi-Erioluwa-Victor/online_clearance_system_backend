@@ -8,16 +8,14 @@ const {
 
 const router = express.Router();
 
-const { protect, authorize } = require("../middleware/auth");
+// const { protect, authorize } = require("../middleware/auth");
 
-router.route("/statistics").get(protect, authorize("admin"), getStatistics);
+router.route("/statistics").get("admin", getStatistics);
 
-router
-  .route("/clearance-reports")
-  .get(protect, authorize("admin"), getClearanceReports);
+router.route("/clearance-reports").get("admin", getClearanceReports);
 
-router.route("/users").post(protect, authorize("admin"), createUser);
+router.route("/users").post("admin", createUser);
 
-router.route("/users/:id").put(protect, authorize("admin"), updateUser);
+router.route("/users/:id").put("admin", updateUser);
 
 module.exports = router;

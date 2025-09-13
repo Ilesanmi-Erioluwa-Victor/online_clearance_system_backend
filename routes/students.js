@@ -8,17 +8,12 @@ const {
 
 const router = express.Router();
 
-const { protect, authorize } = require("../middleware/auth");
+// const { protect, authorize } = require("../middleware/auth");
 
-router
-  .route("/")
-  .get(protect, authorize("admin", "department_head", "staff"), getStudents);
+router.route("/").get(("admin", "department_head", "staff"), getStudents);
 
-router
-  .route("/:id")
-  .get(protect, getStudent)
-  .put(protect, authorize("admin"), updateStudent);
+router.route("/:id").get(getStudent).put("admin", updateStudent);
 
-router.route("/:id/clearance-status").get(protect, getStudentClearanceStatus);
+router.route("/:id/clearance-status").get(getStudentClearanceStatus);
 
 module.exports = router;

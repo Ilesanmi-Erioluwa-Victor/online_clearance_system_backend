@@ -10,38 +10,24 @@ const {
 
 const router = express.Router();
 
-const { protect, authorize } = require("../middleware/auth");
+// const { protect, authorize } = require("../middleware/auth");
 
-router
-  .route("/initiate")
-  .post(protect, authorize("student"), initiateClearance);
+router.route("/initiate").post("student", initiateClearance);
 
-router.route("/:clearanceId").get(protect, getClearance);
+router.route("/:clearanceId").get(getClearance);
 
 router
   .route("/:clearanceId/approve")
-  .post(
-    protect,
-    authorize("admin", "department_head", "staff"),
-    approveRequirement
-  );
+  .post(("admin", "department_head", "staff"), approveRequirement);
 
 router
   .route("/:clearanceId/reject")
-  .post(
-    protect,
-    authorize("admin", "department_head", "staff"),
-    rejectRequirement
-  );
+  .post(("admin", "department_head", "staff"), rejectRequirement);
 
-router.route("/student/:studentId").get(protect, getStudentClearances);
+router.route("/student/:studentId").get(getStudentClearances);
 
 router
   .route("/department/:departmentId")
-  .get(
-    protect,
-    authorize("admin", "department_head", "staff"),
-    getDepartmentClearances
-  );
+  .get(("admin", "department_head", "staff"), getDepartmentClearances);
 
 module.exports = router;
