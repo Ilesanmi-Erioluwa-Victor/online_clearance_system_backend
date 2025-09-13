@@ -93,13 +93,9 @@ const login = async (req, res, next) => {
 // @desc    Get current logged in user
 // @route   GET /api/auth/me
 // @access  Private
-const getMe = async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user.id).populate("department");
-    res.status(200).json({ success: true, data: user });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
+const getMe = (req, res) => {
+  console.log(req.user);
+  res.status(200).json({ success: true, data: req.user });
 };
 
 module.exports = {
