@@ -8,6 +8,9 @@ const Department = require("../models/Department");
 exports.initiateClearance = async (req, res, next) => {
   try {
     const { studentId, departmentId } = req.body;
+    console.log("Incoming request body:", req.body);
+    console.log("Type of studentId:", typeof req.body.studentId);
+    console.log("Type of departmentId:", typeof req.body.departmentId);
 
     // Check if student exists
     const student = await Student.findById(studentId);
