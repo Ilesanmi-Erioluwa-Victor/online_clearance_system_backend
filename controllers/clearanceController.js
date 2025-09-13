@@ -1,6 +1,7 @@
 const Clearance = require("../models/Clearance");
 const Student = require("../models/Student");
 const Department = require("../models/Department");
+const mongoose = require("mongoose");
 
 // @desc    Initiate clearance process
 // @route   POST /api/clearance/initiate
@@ -8,22 +9,39 @@ const Department = require("../models/Department");
 exports.initiateClearance = async (req, res, next) => {
   try {
     const { studentId, departmentId } = req.body;
-    console.log("Incoming request body:", req.body);
-    console.log("Type of studentId:", typeof req.body.studentId);
-    console.log("Type of departmentId:", typeof req.body.departmentId);
 
-    // Check if student exists
-    const student = await Student.findById(studentId);
+    console.log("Incoming request body:", req.body);
+
+    // Ensure IDs are valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid studentId",
+      });
+    }
+    if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid departmentId",
+      });
+    }
+
+    // Find student
+    const student = await Student.findById(mongoose.Types.ObjectId(studentId));
     if (!student) {
+      console.log("Student not found for ID:", studentId);
       return res.status(404).json({
         success: false,
         message: "Student not found",
       });
     }
 
-    // Check if department exists
-    const department = await Department.findById(departmentId);
+    // Find department
+    const department = await Department.findById(
+      mongoose.Types.ObjectId(departmentId)
+    );
     if (!department) {
+      console.log("Department not found for ID:", departmentId);
       return res.status(404).json({
         success: false,
         message: "Department not found",
@@ -32,8 +50,8 @@ exports.initiateClearance = async (req, res, next) => {
 
     // Check if clearance already exists
     const existingClearance = await Clearance.findOne({
-      student: studentId,
-      department: departmentId,
+      student: mongoose.Types.ObjectId(studentId),
+      department: mongoose.Types.ObjectId(departmentId),
     });
 
     if (existingClearance) {
@@ -43,15 +61,17 @@ exports.initiateClearance = async (req, res, next) => {
       });
     }
 
-    // Create clearance requirements based on department requirements
-    const requirements = department.clearanceRequirements.map((req) => ({
-      requirement: req._id,
-      status: "pending",
-    }));
+    // Ensure department has clearance requirements
+    const requirements =
+      department.clearanceRequirements?.map((req) => ({
+        requirement: req._id,
+        status: "pending",
+      })) || [];
 
+    // Create new clearance
     const clearance = await Clearance.create({
-      student: studentId,
-      department: departmentId,
+      student: mongoose.Types.ObjectId(studentId),
+      department: mongoose.Types.ObjectId(departmentId),
       requirements,
     });
 
@@ -65,7 +85,8 @@ exports.initiateClearance = async (req, res, next) => {
       data: clearance,
     });
   } catch (err) {
-    res.status(400).json({
+    console.error("Error initiating clearance:", err);
+    res.status(500).json({
       success: false,
       message: err.message,
     });
