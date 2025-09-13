@@ -2,36 +2,28 @@ const User = require("../models/User");
 const Student = require("../models/Student");
 const jwt = require("jsonwebtoken");
 
-// Generate JWT Token
+// Generate JWT Token and send in JSON response (no cookies)
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
+    expiresIn: process.env.JWT_EXPIRE, // e.g. "1d" or "30m"
   });
 
-  const options = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true,
-  };
-
-  res
-    .status(statusCode)
-    .cookie("token", token, options)
-    .json({
-      success: true,
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        department: user.department,
-        matricNumber: user.matricNumber,
-      },
-    });
+  res.status(statusCode).json({
+    success: true,
+    token,
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      matricNumber: user.matricNumber,
+    },
+  });
 };
+
+module.exports = sendTokenResponse;
 
 // @desc    Register user
 // @route   POST /api/auth/register
