@@ -1,5 +1,4 @@
 const Student = require("../models/Student");
-const User = require("../models/User");
 
 // @desc    Get all students
 // @route   GET /api/students
@@ -16,10 +15,10 @@ const getStudents = async (req, res) => {
       (match) => `$${match}`
     );
 
-    let query = Student.find(JSON.parse(queryStr)).populate([
-      { path: "user", select: "name email" },
-      { path: "department", select: "name code" },
-    ]);
+    let query = Student.find(JSON.parse(queryStr))
+      .populate({ path: "user", select: "name email matricNumber" })
+      .populate({ path: "department", select: "name code" })
+      .populate({ path: "requirements", select: "name status" });
 
     if (req.query.select) {
       const fields = req.query.select.split(",").join(" ");
@@ -62,10 +61,10 @@ const getStudents = async (req, res) => {
 // @access  Private
 const getStudent = async (req, res) => {
   try {
-    const student = await Student.findById(req.params.id).populate([
-      { path: "user", select: "name email" },
-      { path: "department", select: "name code" },
-    ]);
+    const student = await Student.findById(req.params.id)
+      .populate({ path: "user", select: "name email matricNumber" })
+      .populate({ path: "department", select: "name code" })
+      .populate({ path: "requirements", select: "name status" });
 
     if (!student)
       return res
@@ -113,14 +112,12 @@ const updateStudent = async (req, res) => {
       new: true,
       runValidators: true,
     });
-
     res.status(200).json({ success: true, data: student });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
 };
 
-// Export all controller functions
 module.exports = {
   getStudents,
   getStudent,

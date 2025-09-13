@@ -9,12 +9,12 @@ const {
 const router = express.Router();
 
 // Get all students
-router.get("/", getStudents);
+router.route("/").get(getStudents);
 
-// Get a single student by ID and update a student
+// Get a single student by ID and update
 router.route("/:id").get(getStudent).put(updateStudent);
 
 // Get student clearance status
-router.get("/:id/clearance-status", getStudentClearanceStatus);
+router.route("/:id/clearance-status").get(getStudentClearanceStatus);
 
 module.exports = router;
