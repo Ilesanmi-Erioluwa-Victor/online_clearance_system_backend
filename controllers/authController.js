@@ -6,13 +6,14 @@ const jwt = require("jsonwebtoken");
 const sendTokenResponse = (user, statusCode, res) => {
   // Create token
   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE,
+    expiresIn: process.env.JWT_EXPIRE || "30d",
   });
 
+  // Safe cookie expiration
+  const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE, 10) || 30;
+
   const options = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRE * 24 * 60 * 60 * 1000
-    ),
+    expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
     httpOnly: true,
   };
 
@@ -32,6 +33,7 @@ const sendTokenResponse = (user, statusCode, res) => {
       },
     });
 };
+  
 
 // @desc    Register user
 // @route   POST /api/auth/register
