@@ -1,52 +1,46 @@
 const express = require("express");
-const cors = require("cors");
 const dotenv = require("dotenv");
-const morgan = require("morgan");
+const cors = require("cors");
 const connectDB = require("./config/database");
-const errorHandler = require("./middleware/errorHandler");
 
-// Enable CORS
-
+// Load env vars
 dotenv.config();
+
+// Connect to database
 connectDB();
+
+// Route files
+const auth = require("./routes/auth");
+const students = require("./routes/students");
+const departments = require("./routes/departments");
+const clearances = require("./routes/clearance");
+const admin = require("./routes/admin");
 
 const app = express();
 
-// Middleware
+// Body parser
 app.use(express.json());
-if (process.env.NODE_ENV === "development") {
-  app.use(morgan("dev"));
-}
-app.use(
-  cors({
-    origin: "*",
-    credentials: true,
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
 
-// Routes
-const authRoutes = require("./routes/authRoutes");
-const departmentRoutes = require("./routes/departmentRoutes");
-const roleRoutes = require("./routes/roleRoutes");
-const userRoutes = require("./routes/userRoutes");
-const clearanceRoutes = require("./routes/clearanceRoutes");
-const examRecordRoutes = require("./routes/examRoutes");
-const studentRoutes = require("./routes/studentRoutes");
+// Enable CORS
+app.use(cors());
 
-// Register Routes
-app.use("/api/auth", authRoutes);
-app.use("/api/departments", departmentRoutes);
-app.use("/api/roles", roleRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/clearances", clearanceRoutes);
-app.use("/api/exam-records", examRecordRoutes);
-app.use("/api/students", studentRoutes);
-
-// Error handler
-app.use(errorHandler);
+// Mount routers
+app.use("/api/auth", auth);
+app.use("/api/students", students);
+app.use("/api/departments", departments);
+app.use("/api/clearance", clearances);
+app.use("/api/admin", admin);
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
+
+const server = app.listen(
+  PORT,
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`)
 );
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (err, promise) => {
+  console.log(`Error: ${err.message}`);
+  // Close server & exit process
+  server.close(() => process.exit(1));
+});

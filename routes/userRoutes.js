@@ -7,7 +7,8 @@ const {
   deleteUser,
 } = require("../controllers/userController");
 
-const { protect, authorizeRoles } = require("../middleware/auth");
+const { protect } = require("../middleware/auth");
+const { authorize } = require("../middleware/role");
 
 // 👇 Admin/Staff only routes
 router.get("/", protect, authorizeRoles("admin", "staff"), getUsers); // List all users
