@@ -12,14 +12,14 @@ exports.initiateClearance = async (req, res, next) => {
 
     console.log("Incoming request body:", req.body);
 
-    // Ensure IDs are valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    // Validate IDs
+    if (!studentId || studentId.length !== 24) {
       return res.status(400).json({
         success: false,
         message: "Invalid studentId",
       });
     }
-    if (!mongoose.Types.ObjectId.isValid(departmentId)) {
+    if (!departmentId || departmentId.length !== 24) {
       return res.status(400).json({
         success: false,
         message: "Invalid departmentId",
@@ -27,7 +27,7 @@ exports.initiateClearance = async (req, res, next) => {
     }
 
     // Find student
-    const student = await Student.findById(mongoose.Types.ObjectId(studentId));
+    const student = await Student.findById(studentId);
     if (!student) {
       console.log("Student not found for ID:", studentId);
       return res.status(404).json({
@@ -37,9 +37,7 @@ exports.initiateClearance = async (req, res, next) => {
     }
 
     // Find department
-    const department = await Department.findById(
-      mongoose.Types.ObjectId(departmentId)
-    );
+    const department = await Department.findById(departmentId);
     if (!department) {
       console.log("Department not found for ID:", departmentId);
       return res.status(404).json({
@@ -50,8 +48,8 @@ exports.initiateClearance = async (req, res, next) => {
 
     // Check if clearance already exists
     const existingClearance = await Clearance.findOne({
-      student: mongoose.Types.ObjectId(studentId),
-      department: mongoose.Types.ObjectId(departmentId),
+      student: studentId,
+      department: departmentId,
     });
 
     if (existingClearance) {
@@ -61,7 +59,7 @@ exports.initiateClearance = async (req, res, next) => {
       });
     }
 
-    // Ensure department has clearance requirements
+    // Prepare clearance requirements
     const requirements =
       department.clearanceRequirements?.map((req) => ({
         requirement: req._id,
@@ -70,8 +68,8 @@ exports.initiateClearance = async (req, res, next) => {
 
     // Create new clearance
     const clearance = await Clearance.create({
-      student: mongoose.Types.ObjectId(studentId),
-      department: mongoose.Types.ObjectId(departmentId),
+      student: studentId,
+      department: departmentId,
       requirements,
     });
 
@@ -79,6 +77,8 @@ exports.initiateClearance = async (req, res, next) => {
     await Student.findByIdAndUpdate(studentId, {
       clearanceStatus: "in_progress",
     });
+
+    console.log("Clearance initiated successfully:", clearance._id);
 
     res.status(201).json({
       success: true,
