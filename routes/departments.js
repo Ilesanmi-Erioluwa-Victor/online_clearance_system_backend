@@ -8,15 +8,16 @@ const {
 
 const router = express.Router();
 
-// const { protect, authorize } = require("../middleware/auth");
-
+// Get all departments
 router.route("/").get(getDepartments);
 
+// Get a single department by ID
 router.route("/:id").get(getDepartment);
 
+// Get or update department clearance requirements
 router
   .route("/:id/clearance-requirements")
   .get(getDepartmentClearanceRequirements)
-  .put(("admin", "department_head"), updateDepartmentClearanceRequirements);
+  .put(updateDepartmentClearanceRequirements);
 
 module.exports = router;

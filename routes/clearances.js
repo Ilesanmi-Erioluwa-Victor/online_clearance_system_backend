@@ -10,24 +10,22 @@ const {
 
 const router = express.Router();
 
-// const { protect, authorize } = require("../middleware/auth");
+// Initiate clearance
+router.route("/initiate").post(initiateClearance);
 
-router.route("/initiate").post("student", initiateClearance);
-
+// Get a specific clearance by ID
 router.route("/:clearanceId").get(getClearance);
 
-router
-  .route("/:clearanceId/approve")
-  .post(("admin", "department_head", "staff"), approveRequirement);
+// Approve a clearance requirement
+router.route("/:clearanceId/approve").post(approveRequirement);
 
-router
-  .route("/:clearanceId/reject")
-  .post(("admin", "department_head", "staff"), rejectRequirement);
+// Reject a clearance requirement
+router.route("/:clearanceId/reject").post(rejectRequirement);
 
+// Get all clearances for a student
 router.route("/student/:studentId").get(getStudentClearances);
 
-router
-  .route("/department/:departmentId")
-  .get(("admin", "department_head", "staff"), getDepartmentClearances);
+// Get all clearances for a department
+router.route("/department/:departmentId").get(getDepartmentClearances);
 
 module.exports = router;

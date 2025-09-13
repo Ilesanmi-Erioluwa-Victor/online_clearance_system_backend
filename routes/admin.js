@@ -8,14 +8,16 @@ const {
 
 const router = express.Router();
 
-// const { protect, authorize } = require("../middleware/auth");
+// Get system statistics
+router.route("/statistics").get(getStatistics);
 
-router.route("/statistics").get("admin", getStatistics);
+// Get clearance reports
+router.route("/clearance-reports").get(getClearanceReports);
 
-router.route("/clearance-reports").get("admin", getClearanceReports);
+// Create a new user
+router.route("/users").post(createUser);
 
-router.route("/users").post("admin", createUser);
-
-router.route("/users/:id").put("admin", updateUser);
+// Update an existing user
+router.route("/users/:id").put(updateUser);
 
 module.exports = router;

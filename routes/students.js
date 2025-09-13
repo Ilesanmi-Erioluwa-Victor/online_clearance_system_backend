@@ -8,12 +8,13 @@ const {
 
 const router = express.Router();
 
-// const { protect, authorize } = require("../middleware/auth");
+// Get all students
+router.route("/").get(getStudents);
 
-router.route("/").get(("admin", "department_head", "staff"), getStudents);
+// Get a single student by ID and update a student
+router.route("/:id").get(getStudent).put(updateStudent);
 
-router.route("/:id").get(getStudent).put("admin", updateStudent);
-
+// Get student clearance status
 router.route("/:id/clearance-status").get(getStudentClearanceStatus);
 
 module.exports = router;
