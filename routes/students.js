@@ -3,7 +3,6 @@ const {
   getStudents,
   getStudent,
   getStudentClearanceStatus,
-  updateStudent,
 } = require("../controllers/studentController");
 
 const router = express.Router();
